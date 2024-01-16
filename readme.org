@@ -1,0 +1,10 @@
+#+title: Tomasulo Readme
+#+author: Andy Sparks
+
+The goal of this project is simple: to implement Tomasulo's algorithm in C.
+
+Eventually it would be cool to turn this into a RISC emulator, but that is not the goal, just getting the algorithm working
+
+Initally, we will just print the output to stdout, but we could do fancier tui things.
+
+We also could eventually simply read from a file and use that for commands, but for now they will be hard-coded to make my life easier
