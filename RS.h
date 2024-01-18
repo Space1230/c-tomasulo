@@ -31,8 +31,14 @@ unsigned char next_add_sub_RS_index;
 unsigned char next_mult_RS_index;
 unsigned char next_div_RS_index;
 
+unsigned char prev_add_sub_EXUnit;
+unsigned char prev_mult_EXUnit;
+unsigned char prev_div_EXUnit;
+
+
+void print_all_RS();
+// these functions are dependencies of print_all_RS
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index);
-// these functions are dependencies of print_RS
 char *getRS_typeString(enum RS_type type);
 unsigned char getMaxEXUnit (enum RS_type type);
 char *getEXUnitString(unsigned char exunit_num, unsigned char max_exunit, enum RS_type type);

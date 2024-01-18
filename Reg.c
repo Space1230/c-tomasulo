@@ -2,26 +2,32 @@
 
 unsigned char next_reg_index = 0;
 
+// returns an entry if already seen it, or new entry if not, or NULL if the registers is full
 struct Reg_entry *getRegEntry(unsigned char reg_num) {
+    for (int i = 0; i < next_reg_index; i++) {
+        if (registers[i].reg_num == reg_num) {
+            return &registers[i];
+        }
+    }
 
+    if (next_reg_index <= REG_SIZE) {
+        return &registers[next_reg_index++];
+    }
+
+    fprintf(stderr, "ERROR: Reg buffer too small");
+    return NULL;
 }
 
-void print_Reg(struct Reg_entry *registers, unsigned char next_reg_index) {
-    bool printHeader = true;
+void print_Reg() {
+    printf("Registers\n");
+
     for(int i = 0; i < next_reg_index; i++) {
-        if (printHeader) {
-            printf("Registers\n");
-            printHeader = false;
-        } else {
-            registers++;
-        }
-
-    char* newReg = getNewRegValue(registers->new_num, registers->new_or_ROB);
-
-    printf("\tR%d, %s", registers->reg_num, newReg);
+    char* newReg = getNewRegValue(registers[i].new_num, registers[i].new_or_ROB);
+    printf("\tR%d, %s", registers[i].reg_num, newReg);
 
     free(newReg);
     }
+
     printf("\n");
 }
 

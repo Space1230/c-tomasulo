@@ -16,7 +16,7 @@ unsigned char next_reg_index;
 
 struct Reg_entry *getRegEntry(unsigned char reg_num);
 
-void print_Reg(struct Reg_entry *registers, unsigned char next_reg_index);
+void print_Reg();
 // these functions are dependencies of print_Reg
 char *getNewRegValue (unsigned char new_num, bool new_or_ROB);
 

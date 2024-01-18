@@ -1,27 +1,43 @@
 #include "ROB.h"
+#include "Reg.h"
 
 unsigned char next_ROB_index = 0;
 
-void process_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index, struct command *command) {
+void process_ROB(struct command *command) {
+    struct ROB_entry entry = {.ROB_entry_num = next_ROB_index + 1, .busy = true, .instruction = command->instruction, .destination = command->destination_reg, .value = 0, .state = {.stage = ISSUE, .execute_num = 0}};
+
     if (next_ROB_index <= ROB_SIZE) { // default new entry
-        struct ROB_entry entry = {.busy = true, .instruction = command->instruction, .destination = command->destination_reg, .value = 0, .state = {.stage = ISSUE, .execute_num = 0}};
-        *ROB = entry;
+        ROB[next_ROB_index++] = entry;
+    } else {
+        fprintf(stderr, "ERROR: ROB buffer too small");
     }
 
-    // need to see if register has the dest. already there
+    // add to the reservation station
+
+
+    // TODO maybe move this logic to Reg in form of a function
+    // need to update registers with new dest. reg
+    // or new ROB # for dest reg result
+    unsigned char dest_reg = command->destination_reg;
+    struct Reg_entry *regPtr = getRegEntry(dest_reg);
+    if (regPtr == NULL) { return; } // reg datastructure full
+
+    if (regPtr->reg_num == dest_reg) { // change ROB # to current
+        regPtr->new_num = entry.ROB_entry_num;
+    } else { // add a new reg
+        regPtr->reg_num = dest_reg;
+        regPtr->new_num = entry.ROB_entry_num;
+        regPtr->new_or_ROB = false;
+    }
 }
 
-void print_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index) {
-    bool printHeader = true;
+void print_ROB() {
     bool stateShouldFree;
     bool valueShouldFree;
 
-    for (int i = 0; i < next_ROB_index; i++) {
-        if (printHeader) {
-            printf("ROB\t#\tbusy\tinstruction\tdestination\tvalue\tstate\n"); // ROB header
-            printHeader = false;
-        }
+    printf("ROB\t#\tbusy\tinstruction\tdestination\tvalue\tstate\n"); // ROB header
 
+    for (int i = 0; i < next_ROB_index; i++) {
         stateShouldFree = false;
         char* stateString = getStateString(&ROB[i].state, &stateShouldFree);
 

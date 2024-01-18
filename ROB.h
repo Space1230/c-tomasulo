@@ -15,7 +15,7 @@ struct state { // this has to be in a struct because we must keep track
 };
 
 struct ROB_entry {
-    // # will be filled in by printing logic
+    unsigned char ROB_entry_num;
     bool busy;
     enum instruction instruction;
     unsigned char destination; // 0 = no value, this is the register number
@@ -27,9 +27,9 @@ struct ROB_entry {
 struct ROB_entry ROB[ROB_SIZE];
 unsigned char next_ROB_index;
 
-void process_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index, struct command *command);
+void process_ROB(struct command *command);
 
-void print_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index);
+void print_ROB();
 // these instructions are dependencies of print_ROB
 // do the fact that we may or may not use malloc, shouldFree is passed in
 char* getStateString(struct state *state, bool *shouldFree);
