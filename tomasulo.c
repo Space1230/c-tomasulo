@@ -118,7 +118,9 @@ int main() {
     ROB[next_ROB_index++] = my_entry2;
 
     struct RS_entry my_rs_entry = {.EX_unit = 1, .busy = true, .operation = MULT, .val1 = {2, false}, .val2 = {3, false}, .ROB1 = 0, .ROB2 = 0, .ROB_dest = 1};
+    struct RS_entry my_rs_entry2 = {.EX_unit = 1, .busy = true, .operation = MULT, .val1 = {0, false}, .val2 = {2, false}, .ROB1 = 1, .ROB2 = 0, .ROB_dest = 5};
     mult_RS[next_mult_RS_index++] = my_rs_entry;
+    mult_RS[next_mult_RS_index++] = my_rs_entry2;
 
     struct Reg_entry my_reg = {.reg_num = 1, .ROB_num = 1};
     registers[next_reg_index++] = my_reg;
@@ -147,12 +149,18 @@ void print(struct ROB_entry *ROB,
 }
 
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index) {
-    // TODO programmatically gen EX units
     // TODO wrap stuff in loop
     // TODO register printing
     bool shouldFreeV1, shouldFreeV2, shouldFreeR1, shouldFreeR2, shouldFreeRd;
-
-    printf("%s RS\t\tEX unit\t\tbusy\toperation\tval 1\tval 2\tROB 1\tROB 2\tROB destination\n", getRS_typeString(type));
+    bool printHeader = true;
+    for (int i = 0; i < next_RS_index; i++) {
+        if (printHeader) {
+            printf("%s RS\t\tEX unit\t\tbusy\toperation\tval 1\tval 2\tROB 1\tROB 2\tROB destination\n", getRS_typeString(type));
+            printHeader = false;
+        }
+        else {
+            RS++;
+        }
 
     shouldFreeV1 = shouldFreeV2 = shouldFreeR1 = shouldFreeR2 = shouldFreeRd = false;
 
@@ -171,7 +179,7 @@ void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_inde
     optFree(R1, shouldFreeR1);
     optFree(R2, shouldFreeR2);
     optFree(RD, shouldFreeRd);
-
+    }
     return;
 }
 
