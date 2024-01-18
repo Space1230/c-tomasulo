@@ -1,5 +1,6 @@
 #include "commands.h"
 #include "utils.h"
+#include "main.h"
 
 #ifndef RS_H_
 #define RS_H_
@@ -22,6 +23,13 @@ struct RS_entry {
 
 enum RS_type {RS_ADD_SUB, RS_MULT, RS_DIV};
 
+struct RS_entry add_sub_RS[ADD_SUB_RS_SIZE];
+struct RS_entry mult_RS[MULT_RS_SIZE];
+struct RS_entry div_RS[DIV_RS_SIZE];
+
+unsigned char next_add_sub_RS_index;
+unsigned char next_mult_RS_index;
+unsigned char next_div_RS_index;
 
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index);
 // these functions are dependencies of print_RS

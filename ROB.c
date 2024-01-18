@@ -1,5 +1,16 @@
 #include "ROB.h"
 
+unsigned char next_ROB_index = 0;
+
+void process_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index, struct command *command) {
+    if (next_ROB_index <= ROB_SIZE) { // default new entry
+        struct ROB_entry entry = {.busy = true, .instruction = command->instruction, .destination = command->destination_reg, .value = 0, .state = {.stage = ISSUE, .execute_num = 0}};
+        *ROB = entry;
+    }
+
+    // need to see if register has the dest. already there
+}
+
 void print_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index) {
     bool printHeader = true;
     bool stateShouldFree;

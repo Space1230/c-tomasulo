@@ -10,7 +10,8 @@ struct command {
     unsigned char second_reg;
 };
 
-
+#define COMMANDS_SIZE 8
+struct command commands[COMMANDS_SIZE];
 
 char* getInstructionString(enum instruction instruction);
 

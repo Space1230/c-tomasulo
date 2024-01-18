@@ -2,6 +2,10 @@
 #include "utils.h"
 #include "main.h"
 
+unsigned char next_add_sub_RS_index = 0;
+unsigned char next_mult_RS_index = 0;
+unsigned char next_div_RS_index = 0;
+
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index) {
     // TODO register printing
     bool shouldFreeV1, shouldFreeV2, shouldFreeR1, shouldFreeR2, shouldFreeRd;

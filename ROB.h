@@ -1,3 +1,4 @@
+#include "main.h"
 #include "commands.h"
 #include "utils.h"
 
@@ -22,6 +23,11 @@ struct ROB_entry {
     struct state state;
 };
 
+
+struct ROB_entry ROB[ROB_SIZE];
+unsigned char next_ROB_index;
+
+void process_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index, struct command *command);
 
 void print_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index);
 // these instructions are dependencies of print_ROB

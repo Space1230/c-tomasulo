@@ -1,5 +1,11 @@
 #include "Reg.h"
 
+unsigned char next_reg_index = 0;
+
+struct Reg_entry *getRegEntry(unsigned char reg_num) {
+
+}
+
 void print_Reg(struct Reg_entry *registers, unsigned char next_reg_index) {
     bool printHeader = true;
     for(int i = 0; i < next_reg_index; i++) {
