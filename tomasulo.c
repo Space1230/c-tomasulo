@@ -66,7 +66,8 @@ enum RS_type {RS_ADD_SUB, RS_MULT, RS_DIV};
 
 struct Reg_entry {
     unsigned char reg_num;
-    unsigned char ROB_num;
+    unsigned char new_num;
+    bool new_or_ROB;
 };
 
 void print_ROB(struct ROB_entry *ROB, unsigned char next_ROB_index);
@@ -75,14 +76,17 @@ char* getStateString(struct state *state, bool *shouldFree); // in the case of a
                                                              // you need to free the generated string
 char* getValueString(unsigned char value, bool *shouldFree);
 
-
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index);
-// these instructions are dependencies of print_RS
+// these functions are dependencies of print_RS
 char *getRS_typeString(enum RS_type type);
 unsigned char getMaxEXUnit (enum RS_type type);
 char *getEXUnitString(unsigned char exunit_num, unsigned char max_exunit, enum RS_type type);
 char *getValString(struct RS_val* val, bool *shouldFree);
 char *RS_getROBString(unsigned char ROB_num, bool *shouldFree);
+
+void print_Reg(struct Reg_entry *registers, unsigned char next_reg_index);
+// these functions are dependencies of print_Reg
+char *getNewRegValue (unsigned char new_num, bool new_or_ROB);
 
 // these are generally useful print functions
 char* getInstructionString(enum instruction instruction);
@@ -122,11 +126,14 @@ int main() {
     mult_RS[next_mult_RS_index++] = my_rs_entry;
     mult_RS[next_mult_RS_index++] = my_rs_entry2;
 
-    struct Reg_entry my_reg = {.reg_num = 1, .ROB_num = 1};
+    struct Reg_entry my_reg = {.reg_num = 1, .new_num = 1, .new_or_ROB = false};
+    struct Reg_entry my_reg2 = {.reg_num = 5, .new_num = 2, .new_or_ROB = false};
     registers[next_reg_index++] = my_reg;
+    registers[next_reg_index++] = my_reg2;
 
     //print_ROB(ROB, next_ROB_index);
-    print_RS(mult_RS, RS_MULT, next_mult_RS_index);
+    //print_RS(mult_RS, RS_MULT, next_mult_RS_index);
+    print_Reg(registers, next_reg_index);
 
 
 }
@@ -148,8 +155,40 @@ void print(struct ROB_entry *ROB,
     printf("Time 1\t\tinstruction - MULT R1, R2, R3\n");
 }
 
+void print_Reg(struct Reg_entry *registers, unsigned char next_reg_index) {
+    bool printHeader = true;
+    for(int i = 0; i < next_reg_index; i++) {
+        if (printHeader) {
+            printf("Registers\n");
+            printHeader = false;
+        } else {
+            registers++;
+        }
+
+    char* newReg = getNewRegValue(registers->new_num, registers->new_or_ROB);
+
+    printf("\tR%d, %s", registers->reg_num, newReg);
+
+    free(newReg);
+    }
+    printf("\n");
+}
+
+char *getNewRegValue (unsigned char new_num, bool new_or_ROB) {
+    char *string;
+
+    if (new_or_ROB) {
+        string = malloc(sizeof("[newR255]"));
+        sprintf(string, "[newR%d]", new_num);
+    } else {
+        string = malloc(sizeof("ROB #255"));
+        sprintf(string, "ROB #%d", new_num);
+    }
+
+    return string;
+}
+
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index) {
-    // TODO wrap stuff in loop
     // TODO register printing
     bool shouldFreeV1, shouldFreeV2, shouldFreeR1, shouldFreeR2, shouldFreeRd;
     bool printHeader = true;
