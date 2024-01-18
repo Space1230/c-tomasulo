@@ -79,6 +79,8 @@ char* getValueString(unsigned char value, bool *shouldFree);
 void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_index);
 // these instructions are dependencies of print_RS
 char *getRS_typeString(enum RS_type type);
+unsigned char getMaxEXUnit (enum RS_type type);
+char *getEXUnitString(unsigned char exunit_num, unsigned char max_exunit, enum RS_type type);
 char *getValString(struct RS_val* val, bool *shouldFree);
 char *RS_getROBString(unsigned char ROB_num, bool *shouldFree);
 
@@ -91,8 +93,11 @@ void optFree(void *item, bool shouldFree);
 
 #define ROB_SIZE 8
 #define ADD_SUB_RS_SIZE 4
+#define ADD_SUB_EXUNIT_MAX 2
 #define MULT_RS_SIZE 2
+#define MULT_EXUNIT_MAX 1
 #define DIV_RS_SIZE 2
+#define DIV_EXUNIT_MAX 1
 #define REG_SIZE 10
 
 int main() {
@@ -151,14 +156,16 @@ void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_inde
 
     shouldFreeV1 = shouldFreeV2 = shouldFreeR1 = shouldFreeR2 = shouldFreeRd = false;
 
+    char* EX = getEXUnitString(RS->EX_unit, getMaxEXUnit(type), type);
     char* V1 = getValString(&RS->val1, &shouldFreeV1);
     char* V2 = getValString(&RS->val2, &shouldFreeV2);
     char* R1 = RS_getROBString(RS->ROB1, &shouldFreeR1);
     char* R2 = RS_getROBString(RS->ROB2, &shouldFreeR2);
     char* RD = RS_getROBString(RS->ROB_dest, &shouldFreeRd);
 
-    printf("\t\t%s\t\t%s\t%s\t\t%s\t%s\t%s\t%s\t%s\n", "mul", getBoolString(RS->busy), getInstructionString(RS->operation), V1, V2, R1, R2, RD);
+    printf("\t\t%s\t\t%s\t%s\t\t%s\t%s\t%s\t%s\t%s\n", EX, getBoolString(RS->busy), getInstructionString(RS->operation), V1, V2, R1, R2, RD);
 
+    free(EX);
     optFree(V1, shouldFreeV1);
     optFree(V2, shouldFreeV2);
     optFree(R1, shouldFreeR1);
@@ -166,6 +173,46 @@ void print_RS(struct RS_entry *RS, enum RS_type type, unsigned char next_RS_inde
     optFree(RD, shouldFreeRd);
 
     return;
+}
+
+unsigned char getMaxEXUnit (enum RS_type type) {
+    switch (type) {
+        case RS_ADD_SUB:
+            return ADD_SUB_EXUNIT_MAX;
+            break;
+        case RS_MULT:
+            return MULT_EXUNIT_MAX;
+            break;
+        case RS_DIV:
+            return DIV_EXUNIT_MAX;
+            break;
+    }
+    return 1;
+}
+
+char *getEXUnitString(unsigned char exunit_num, unsigned char max_exunit, enum RS_type type) {
+    char *exName;
+    switch (type) {
+        case RS_ADD_SUB:
+            exName = "AS";
+            break;
+        case RS_MULT:
+            exName = "mul";
+            break;
+        case RS_DIV:
+            exName = "div";
+            break;
+        default:
+            exName = "ERR";
+    }
+
+    char* string = malloc(sizeof(exName) + 3); // the three is for the max num 255
+    if (max_exunit == 1) {
+        strcpy(string, exName);
+    } else {
+        sprintf(string, "%s%d", exName, exunit_num);
+    }
+    return string;
 }
 
 char *getRS_typeString(enum RS_type type) {
