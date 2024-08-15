@@ -1,14 +1,36 @@
 // For now: focus on issue
+//
+// RS
+// I want each RS to be in
+// a RS station array, accessable
+// by the opperation as an index
 
 #include "main.h"
 #include "stdbool.h"
 #include "stdio.h"
+
+#define bool_string(b) (b == true) ? "true" : "false"
 
 typedef enum {
     ADD = 0,
     SUB = 1,
     MULT = 2,
     DIV = 3} operation;
+
+char* operation_string(operation operation) {
+    char* operation_string;
+    switch(operation) {
+        case ADD: operation_string = "ADD";
+        break;
+        case SUB: operation_string = "SUB";
+        break;
+        case MULT: operation_string = "MULT";
+        break;
+        case DIV: operation_string = "DIV";
+        break;
+    }
+    return operation_string;
+}
 
 typedef enum {
     ISSUE = 0,
@@ -18,9 +40,53 @@ typedef enum {
 } state_name;
 
 typedef struct {
-    state_name state_name;
-    int state_step;
+    state_name name;
+    int step;
 } state;
+
+char* state_string(state state, char* allocated_space) {
+    char* state_string;
+    switch(state.name) {
+        case ISSUE: state_string = "issue";
+        break;
+        case EXECUTE:
+            if (state.step > 0) {
+                sprintf(allocated_space, "execute (%d)", state.step);
+                state_string = allocated_space;
+            } else {
+                state_string = "execute";
+            }
+        break;
+        case COMMIT: state_string = "commit";
+        break;
+        case WRITE: state_string = "write";
+        break;
+    }
+    return state_string;
+}
+
+typedef struct {
+    int register_number;
+    bool new;
+} value_register;
+
+char* value_register_string(value_register value_register, char* allocated_space) {
+    char* value;
+
+    // no item
+    if (value_register.register_number == -1) {
+        value = "-";
+    // item, but new
+    } else if (value_register.new == true) {
+            sprintf(allocated_space, "[newR%d]", value_register.register_number);
+    // item
+    } else {
+        sprintf(allocated_space, "[R%d]", value_register.register_number);
+        value = allocated_space;
+    }
+
+    return value;
+}
 
 typedef struct {
     operation operation;
@@ -38,13 +104,14 @@ instruction instructions[] = {{MULT, 1, 2, 3},
                               {SUB, 6, 2, 5},
                               {ADD, 1, 5, 2}};
 
+// ROB STUFF
 // if value is -1, it currently doesn't exist
 typedef struct {
     int number;
     bool busy;
     operation opperation;
     int destination;
-    int value;
+    value_register value;
     state state;
     } ROB_entry;
 
@@ -52,6 +119,15 @@ typedef struct{
     ROB_entry entry[ROB_SIZE];
     int size;
 }ROB;
+
+// RS STUFF
+typedef struct {
+    int ex_unit;
+    bool busy;
+    operation operation;
+
+
+} RS_entry;
 
 void issue_instruction(instruction instruction, ROB* ROB) {
     // check if ROB has room
@@ -69,42 +145,17 @@ void issue_instruction(instruction instruction, ROB* ROB) {
 }
 
 void print_ROB(ROB* ROB) {
-    char value_space[4];
-    printf("ROB\t#\tbusy\tinstruction\tdestination\tvalue\tstate\n");
+    char value_space[10];
+    char state_space[100];
+    printf("ROB\t#\tbusy\tinstruction\tdestination\tvalue\tstate\n"); // header
 
     for (int i = 0; i < ROB->size; i++) {
         ROB_entry entry = ROB->entry[i];
-// convert busy, instruction, and value into proper form
-        char* busy = (entry.busy == true) ? "true" : "false";
-        char* instruction;
-        switch(entry.opperation) {
-            case ADD: instruction = "ADD";
-            break;
-            case SUB: instruction = "SUB";
-            break;
-            case MULT: instruction = "MULT";
-            break;
-            case DIV: instruction = "DIV";
-            break;
-        }
-        char* value;
-        if (entry.value == -1) {
-            value = "-";
-        } else {
-            sprintf(value_space, "%d", entry.value);
-            value = value_space;
-        }
-        char* state;
-        switch(entry.state.state_name) {
-            case ISSUE: state = "issue";
-            break;
-            case EXECUTE: state = "execute";
-            break;
-            case COMMIT: state = "commit";
-            break;
-            case WRITE: state = "write";
-            break;
-        }
+
+        char* busy = bool_string(entry.busy);
+        char* instruction = operation_string(entry.opperation);
+        char* value = value_register_string(entry.value, value_space);
+        char* state = state_string(entry.state, state_space);
 
         printf("\t%d\t%s\t%s\t\tR%d\t\t%s\t%s\n", entry.number, busy, instruction, entry.destination, value, state);
     }
