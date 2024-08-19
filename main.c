@@ -6,8 +6,9 @@
 // by the opperation as an index
 
 #include "main.h"
-#include "stdbool.h"
-#include "stdio.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define bool_string(b) (b == true) ? "true" : "false"
 
@@ -120,33 +121,9 @@ typedef struct{
     int size;
 }ROB;
 
-// RS STUFF
-typedef struct {
-    int ex_unit;
-    bool busy;
-    operation operation;
-
-
-} RS_entry;
-
-void issue_instruction(instruction instruction, ROB* ROB) {
-    // check if ROB has room
-    if (ROB_SIZE < ROB->size + 1) {
-        fprintf(stderr, "ROB out of space");
-        return;
-    }
-    // check if registration station has room
-    // check if register has room
-
-    // add entry to ROB
-    state new_state = {ISSUE, -1};
-    ROB_entry new_entry = {ROB->size + 1, true, instruction.operation, instruction.destination_register, -1, new_state};
-    ROB->entry[ROB->size++] = new_entry;
-}
-
 void print_ROB(ROB* ROB) {
     char value_space[10];
-    char state_space[100];
+    char state_space[20];
     printf("ROB\t#\tbusy\tinstruction\tdestination\tvalue\tstate\n"); // header
 
     for (int i = 0; i < ROB->size; i++) {
@@ -161,12 +138,80 @@ void print_ROB(ROB* ROB) {
     }
 }
 
+// RS STUFF
+typedef struct {
+    int ex_unit;
+    bool busy;
+    operation operation;
+    value_register value1;
+    value_register value2;
+    int ROB1;
+    int ROB2;
+    int ROB_dest;
+} RS_entry;
+
+typedef struct {
+    RS_entry* entries;
+    int size;
+    int max_size;
+    int exunit_max;
+} RS;
+
+void issue_instruction(instruction instruction, ROB* ROB, RS* RS_array) {
+    RS RS = RS_array[instruction.operation];
+
+    // check if ROB has room
+    if (ROB_SIZE < ROB->size + 1) {
+        fprintf(stderr, "ROB out of space");
+        return;
+    }
+
+    // check if registration station has room
+    if (RS.max_size < RS.size + 1) {
+        fprintf(stderr, "RS out of space");
+        return;
+    }
+    // check if register has room
+
+    // add entry to ROB
+    state new_state = {ISSUE, -1};
+    value_register new_value = {-1, false};
+    ROB_entry new_ROB_entry = {ROB->size + 1, true, instruction.operation, instruction.destination_register, new_value, new_state};
+    ROB->entry[ROB->size++] = new_ROB_entry;
+
+    // add entry to RS
+    // picks the exunit
+    RS_entry old_RS_entry = RS.entries[RS.size - 1];
+    int new_exunit_num;
+    if (old_RS_entry.ex_unit == RS.exunit_max) {
+        new_exunit_num = 1;
+    } else {
+        new_exunit_num  = old_RS_entry.ex_unit + 1;
+    }
+    // TODO ROB and value logic
+    // requires the registers
+    // to look through
+    RS_entry new_RS_entry = {new_exunit_num, true, instruction.operation, -1, -1, -1, -1, new_ROB_entry.number};
+    RS.entries[RS.size++] = new_RS_entry;
+   
+    // add entry to Reg
+
+}
+
+#define RS_init(max, exunit_max) {malloc(sizeof(RS_entry) * max), 0, max, exunit_max}
+
 int main() {
     ROB ROB = {};
 
+    RS add_rs = RS_init(ADD_SUB_RS_SIZE, ADD_SUB_EXUNIT_MAX);
+    RS sub_rs = RS_init(ADD_SUB_RS_SIZE, ADD_SUB_EXUNIT_MAX);
+    RS mult_rs = RS_init(MULT_RS_SIZE, MULT_EXUNIT_MAX);
+    RS div_rs = RS_init(DIV_RS_SIZE, DIV_EXUNIT_MAX);
+    RS RS[] = {add_rs, sub_rs, mult_rs, div_rs};
+
     int instruction_size = sizeof(instructions) / sizeof(instruction);
     for (int i = 0; i < instruction_size; i++) {
-        issue_instruction(instructions[i], &ROB);
+        issue_instruction(instructions[i], &ROB, RS);
         ROB_entry entry = ROB.entry[i];
     }
     print_ROB(&ROB);
