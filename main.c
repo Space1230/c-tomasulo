@@ -13,10 +13,10 @@
 #define bool_string(b) (b == true) ? "true" : "false"
 
 typedef enum {
-    ADD = 0,
-    SUB = 1,
-    MULT = 2,
-    DIV = 3} operation;
+    ADD,
+    SUB,
+    MULT,
+    DIV} operation;
 
 char* operation_string(operation operation) {
     char* operation_string;
@@ -78,8 +78,9 @@ char* value_register_string(value_register value_register, char* allocated_space
     if (value_register.register_number == -1) {
         value = "-";
     // item, but new
-    } else if (value_register.new == true) {
-            sprintf(allocated_space, "[newR%d]", value_register.register_number);
+    } else if (value_register.new) {
+        sprintf(allocated_space, "[newR%d]", value_register.register_number);
+        value = allocated_space;
     // item
     } else {
         sprintf(allocated_space, "[R%d]", value_register.register_number);
@@ -136,6 +137,7 @@ void print_ROB(ROB* ROB) {
 
         printf("\t%d\t%s\t%s\t\tR%d\t\t%s\t%s\n", entry.number, busy, instruction, entry.destination, value, state);
     }
+    printf("\n");
 }
 
 // RS STUFF
@@ -150,69 +152,139 @@ typedef struct {
     int ROB_dest;
 } RS_entry;
 
+char* ROB_value_string(int ROB_value, char* allocated_space) {
+    if (ROB_value == -1) {
+        return "-";
+    }
+
+    sprintf(allocated_space, "#%d", ROB_value);
+    return allocated_space;
+}
+
 typedef struct {
+    char* name;
     RS_entry* entries;
     int size;
     int max_size;
+    char* exunit_name;
     int exunit_max;
 } RS;
 
-void issue_instruction(instruction instruction, ROB* ROB, RS* RS_array) {
-    RS RS = RS_array[instruction.operation];
+int opperation_to_RS(operation operation) {
+    switch (operation) {
+        case ADD:
+        case SUB:
+            return 0;
+        case MULT:
+            return 1;
+        case DIV:
+            return 2;
+    }
+}
+
+void print_RS(RS** RS_array) {
+    // allocating for strings
+    char value1_allocated_space[10];
+    char value2_allocated_space[10];
+    char ROB1_allocated_space[10];
+    char ROB2_allocated_space[10];
+    char ROB_dest_allocated_space[10];
+
+    for (int i = 0; i < 3; i++) {
+        RS* RS = RS_array[i];
+        // add padding if needed
+        char* padding = "";
+        if (i != 0) {padding = "\t";}
+
+        printf("%s%s\tEx unit\tbusy\toperation\tval1\tval2\tROB 1\tROB 2\tROB dest\n", RS->name, padding);
+
+        bool print_name_and_number = false;
+        if (RS->exunit_max != 1) {
+            print_name_and_number = true;
+        }
+
+        //print out every item
+        //TODO replace 1
+        for (int j = 0; j < RS->size; j++) {
+            RS_entry entry = RS->entries[j];
+            // print exunit
+            if (print_name_and_number) {
+                printf("\t\t%s%d\t", RS->exunit_name, entry.ex_unit);
+            } else {
+                printf("\t\t%s\t", RS->exunit_name);
+            }
+            // print rest
+            char* busy = bool_string(entry.busy);
+            char* operation = operation_string(entry.operation);
+            char* value1 = value_register_string(entry.value1, value1_allocated_space);
+            char* value2 = value_register_string(entry.value2, value2_allocated_space);
+            char* ROB1 = ROB_value_string(entry.ROB1, ROB1_allocated_space);
+            char* ROB2 = ROB_value_string(entry.ROB2, ROB2_allocated_space);
+            char* ROB_dest = ROB_value_string(entry.ROB_dest, ROB_dest_allocated_space);
+
+            printf("%s\t%s\t\t%s\t%s\t%s\t%s\t%s\n", busy, operation, value1, value2, ROB1, ROB2, ROB_dest);
+        }
+    }
+    printf("\n");
+}
+
+
+void issue_instruction(instruction instruction, ROB* ROB, RS** RS_array) {
+    RS* RS = RS_array[opperation_to_RS(instruction.operation)];
 
     // check if ROB has room
     if (ROB_SIZE < ROB->size + 1) {
-        fprintf(stderr, "ROB out of space");
+        fprintf(stderr, "ROB out of space\n");
         return;
     }
 
     // check if registration station has room
-    if (RS.max_size < RS.size + 1) {
-        fprintf(stderr, "RS out of space");
+    if (RS->max_size < RS->size + 1) {
+        fprintf(stderr, "RS out of space\n");
         return;
     }
     // check if register has room
 
     // add entry to ROB
-    state new_state = {ISSUE, -1};
-    value_register new_value = {-1, false};
-    ROB_entry new_ROB_entry = {ROB->size + 1, true, instruction.operation, instruction.destination_register, new_value, new_state};
+    ROB_entry new_ROB_entry = {ROB->size + 1, true, instruction.operation, instruction.destination_register, {-1, false}, {ISSUE, -1}};
     ROB->entry[ROB->size++] = new_ROB_entry;
+
 
     // add entry to RS
     // picks the exunit
-    RS_entry old_RS_entry = RS.entries[RS.size - 1];
-    int new_exunit_num;
-    if (old_RS_entry.ex_unit == RS.exunit_max) {
-        new_exunit_num = 1;
-    } else {
-        new_exunit_num  = old_RS_entry.ex_unit + 1;
+    int new_exunit_num = 1;
+    if (RS->size > 0) {
+        RS_entry old_entry = RS->entries[RS->size - 1];
+        if (old_entry.ex_unit != RS->exunit_max) {
+            new_exunit_num = old_entry.ex_unit + 1;
+        }
     }
+
     // TODO ROB and value logic
     // requires the registers
     // to look through
-    RS_entry new_RS_entry = {new_exunit_num, true, instruction.operation, -1, -1, -1, -1, new_ROB_entry.number};
-    RS.entries[RS.size++] = new_RS_entry;
-   
+    RS_entry new_RS_entry = {new_exunit_num, true, instruction.operation, {-1, false}, {-1, false}, -1, -1, new_ROB_entry.number};
+    RS->entries[RS->size++] = new_RS_entry;
+
+
     // add entry to Reg
 
 }
 
-#define RS_init(max, exunit_max) {malloc(sizeof(RS_entry) * max), 0, max, exunit_max}
+#define RS_init(name, max, exunit_name, exunit_max) {name, malloc(sizeof(RS_entry) * max), 0, max, exunit_name, exunit_max}
 
 int main() {
     ROB ROB = {};
 
-    RS add_rs = RS_init(ADD_SUB_RS_SIZE, ADD_SUB_EXUNIT_MAX);
-    RS sub_rs = RS_init(ADD_SUB_RS_SIZE, ADD_SUB_EXUNIT_MAX);
-    RS mult_rs = RS_init(MULT_RS_SIZE, MULT_EXUNIT_MAX);
-    RS div_rs = RS_init(DIV_RS_SIZE, DIV_EXUNIT_MAX);
-    RS RS[] = {add_rs, sub_rs, mult_rs, div_rs};
+    RS add_sub_rs = RS_init("ADD/SUB RS", ADD_SUB_RS_SIZE, "AS", ADD_SUB_EXUNIT_MAX);
+    RS mult_rs = RS_init("MULT RS", MULT_RS_SIZE, "mul", MULT_EXUNIT_MAX);
+    RS div_rs = RS_init("DIV RS", DIV_RS_SIZE, "div", DIV_EXUNIT_MAX);
+    RS* RS[] = {&add_sub_rs, &mult_rs, &div_rs};
 
     int instruction_size = sizeof(instructions) / sizeof(instruction);
     for (int i = 0; i < instruction_size; i++) {
         issue_instruction(instructions[i], &ROB, RS);
-        ROB_entry entry = ROB.entry[i];
     }
     print_ROB(&ROB);
+    print_RS(RS);
 }
