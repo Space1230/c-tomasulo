@@ -230,6 +230,10 @@ void print_RS(RS** RS_array) {
 }
 
 // Reg stuff
+// NOTE: this is currently is really inefficient,
+//       eventually replace with dictionary
+//       (I don't care about this until everything
+//        is implemented)
 typedef struct {
     int number;
     int ROB_number;
@@ -294,10 +298,27 @@ void issue_instruction(instruction instruction, ROB* ROB, RS** RS_array, Reg* Re
         }
     }
 
-    // TODO ROB and value logic
-    // requires the registers
-    // to look through
-    RS_entry new_RS_entry = {new_exunit_num, true, instruction.operation, {-1, false}, {-1, false}, -1, -1, new_ROB_entry.number};
+    // look through Reg to see if we are waiting on a ROB result
+    // this is very inefficient, but works for now
+    value_register value1 = {instruction.opperand1, false};
+    int ROB1 = -1;
+    for (int i = 0; i < Reg->size; i++) {
+        Reg_entry Reg_entry = Reg->entries[i];
+        if (Reg_entry.number == instruction.opperand1) {
+            value1.register_number = -1;
+            ROB1 = Reg_entry.ROB_number;
+        }
+    }
+    value_register value2 = {instruction.opperand2, false};
+    int ROB2 = -1;
+    for (int i = 0; i < Reg->size; i++) {
+        Reg_entry Reg_entry = Reg->entries[i];
+        if (Reg_entry.number == instruction.opperand2) {
+            value2.register_number = -1;
+            ROB2 = Reg_entry.ROB_number;
+        }
+    }
+    RS_entry new_RS_entry = {new_exunit_num, true, instruction.operation, value1, value2, ROB1, ROB2, new_ROB_entry.number};
     RS->entries[RS->size++] = new_RS_entry;
 
 
