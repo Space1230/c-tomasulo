@@ -225,42 +225,42 @@ void print_RS(RS** RS_array) {
 
             printf("%s\t%s\t\t%s\t%s\t%s\t%s\t%s\n", busy, operation, value1, value2, ROB1, ROB2, ROB_dest);
         }
+        printf("\n");
     }
-    printf("\n");
 }
 
 // Reg stuff
-// NOTE: this is currently is really inefficient,
-//       eventually replace with dictionary
-//       (I don't care about this until everything
-//        is implemented)
 typedef struct {
-    int number;
     int ROB_number;
     bool new;
 } Reg_entry;
 
 typedef struct {
     Reg_entry entries[REG_SIZE];
-    int size;
 } Reg;
 
 void print_Reg(Reg *Reg) {
     char reg_value_allocated_space[20];
     printf("Registers\n");
 
-    for (int i = 0; i < Reg->size; i++) {
-        Reg_entry Reg_entry = Reg->entries[i];
+    for (int reg_num = 0; reg_num < REG_SIZE; reg_num++) {
+        Reg_entry Reg_entry = Reg->entries[reg_num];
+        if (!Reg_entry.ROB_number) { // if there is no entry, just skip
+            continue;
+        }
+
         if (Reg_entry.new == true) {
-            sprintf(reg_value_allocated_space, "[newR%d]", Reg_entry.number);
+            sprintf(reg_value_allocated_space, "[newR%d]", reg_num);
         } else {
             sprintf(reg_value_allocated_space, "ROB #%d", Reg_entry.ROB_number);
         }
-        printf("\tR%d, %s", Reg_entry.number, reg_value_allocated_space);
+        printf("\tR%d, %s", reg_num, reg_value_allocated_space);
     }
     printf("\n\n");
 }
 
+
+#define gt_Reg(Reg) REG_SIZE < Reg
 
 void issue_instruction(instruction instruction, ROB* ROB, RS** RS_array, Reg* Reg) {
     RS* RS = RS_array[opperation_to_RS(instruction.operation)];
@@ -278,8 +278,9 @@ void issue_instruction(instruction instruction, ROB* ROB, RS** RS_array, Reg* Re
     }
 
     // check if register has room
-    if (REG_SIZE < Reg->size) {
-        fprintf(stderr, "Reg out of space\n");
+    if (gt_Reg(instruction.destination_register) ||
+        gt_Reg(instruction.opperand1) || gt_Reg(instruction.opperand2)) {
+        fprintf(stderr, "Reg space is too small\n");
         return;
     }
 
@@ -299,47 +300,57 @@ void issue_instruction(instruction instruction, ROB* ROB, RS** RS_array, Reg* Re
     }
 
     // look through Reg to see if we are waiting on a ROB result
-    // this is very inefficient, but works for now
     value_register value1 = {instruction.opperand1, false};
     int ROB1 = -1;
-    for (int i = 0; i < Reg->size; i++) {
-        Reg_entry Reg_entry = Reg->entries[i];
-        if (Reg_entry.number == instruction.opperand1) {
-            value1.register_number = -1;
-            ROB1 = Reg_entry.ROB_number;
-        }
+    Reg_entry val1_Reg_entry = Reg->entries[instruction.opperand1];
+    if (val1_Reg_entry.ROB_number) { // if entry exists
+        value1.register_number = -1;
+        ROB1 = val1_Reg_entry.ROB_number;
     }
+
     value_register value2 = {instruction.opperand2, false};
     int ROB2 = -1;
-    for (int i = 0; i < Reg->size; i++) {
-        Reg_entry Reg_entry = Reg->entries[i];
-        if (Reg_entry.number == instruction.opperand2) {
-            value2.register_number = -1;
-            ROB2 = Reg_entry.ROB_number;
-        }
+    Reg_entry val2_Reg_entry = Reg->entries[instruction.opperand2];
+    if (val2_Reg_entry.ROB_number) {
+        value2.register_number = -1;
+        ROB2 = val2_Reg_entry.ROB_number;
     }
+
     RS_entry new_RS_entry = {new_exunit_num, true, instruction.operation, value1, value2, ROB1, ROB2, new_ROB_entry.number};
     RS->entries[RS->size++] = new_RS_entry;
 
-
     // add entry to Reg
     // update existing if found
-    for (int i = 0; i < Reg->size; i++) {
-        Reg_entry* Reg_entry = &Reg->entries[i];
-        if (Reg_entry->number == instruction.destination_register) {
-            Reg_entry->ROB_number = new_ROB_entry.number;
-            Reg_entry->new = false;
-            return; // we can do this here, since everything is already updated
+    Reg_entry* dest_Reg_entry = &Reg->entries[instruction.destination_register];
+    if (dest_Reg_entry->ROB_number) {
+        dest_Reg_entry->ROB_number = new_ROB_entry.number;
+        dest_Reg_entry->new = false;
+    } else { // create new Reg
+        Reg_entry new_Reg_entry = {new_ROB_entry.number, false};
+        Reg->entries[instruction.destination_register] = new_Reg_entry;
+    }
+}
+
+
+void process_issued_instructions(ROB* ROB, RS** RS_array, Reg* Reg) {
+    //This function will basically handle all the stuff in the issue state
+    //This may extend to just processing every old instruction IDK
+
+    // to move to execute, all the values must be present.
+
+    // it seems the best action will be iterating through the reservation stations
+    for (int j = 0; j < 3; j++) {
+        RS* RS = RS_array[j];
+        for (int i = 0; i < RS->size; i++) {
+            RS_entry RS_entry = RS->entries[i];
         }
     }
-    // reg was not found
-    Reg_entry new_Reg_entry = {instruction.destination_register, new_ROB_entry.number, false};
-    Reg->entries[Reg->size++] = new_Reg_entry;
 }
 
 #define RS_init(name, max, exunit_name, exunit_max) {name, malloc(sizeof(RS_entry) * max), 0, max, exunit_name, exunit_max}
 
 int main() {
+
     ROB ROB = {};
 
     RS add_sub_rs = RS_init("ADD/SUB RS", ADD_SUB_RS_SIZE, "AS", ADD_SUB_EXUNIT_MAX);
@@ -353,6 +364,7 @@ int main() {
     for (int i = 0; i < instruction_size; i++) {
         issue_instruction(instructions[i], &ROB, RS, &Reg);
     }
+
     print_ROB(&ROB);
     print_RS(RS);
     print_Reg(&Reg);
