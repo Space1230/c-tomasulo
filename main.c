@@ -169,6 +169,7 @@ typedef struct {
     int max_size;
     char* exunit_name;
     int exunit_max;
+    bool* exunit_busy;
 } RS;
 
 int opperation_to_RS(operation operation) {
@@ -337,17 +338,45 @@ void process_issued_instructions(ROB* ROB, RS** RS_array, Reg* Reg) {
     //This may extend to just processing every old instruction IDK
 
     // to move to execute, all the values must be present.
+    // so, we iterate through all RS entries and change it to execute
 
-    // it seems the best action will be iterating through the reservation stations
     for (int j = 0; j < 3; j++) {
         RS* RS = RS_array[j];
+
         for (int i = 0; i < RS->size; i++) {
             RS_entry RS_entry = RS->entries[i];
+            int ROB_index = RS_entry.ROB_dest - 1;
+
+            if (ROB->entry[ROB_index].state.name == ISSUE) {
+            // TODO eventually make all this processing a function call
+            // and rename the function
+
+                if (RS_entry.value1.register_number != -1 &&
+                    RS_entry.value2.register_number != -1 &&
+                    !RS->exunit_busy[RS_entry.ex_unit - 1]) {
+
+                    if (RS_entry.ROB_dest > ROB->size) {
+                        sprintf(stderr, "ROB_dest too large");
+                        continue;
+                    }
+
+                    // change to execution
+                    state *ROB_state = &ROB->entry[RS_entry.ROB_dest - 1].state;
+                    ROB_state->name = EXECUTE;
+                    ROB_state->step = 1;
+                    RS->exunit_busy[RS_entry.ex_unit - 1] = true;
+                    // temp printing
+                    /* printf("printing %s\n", RS->exunit_name); */
+                    /* for (int ex_busy = 0; ex_busy < RS->exunit_max; ex_busy++) */
+                    /*     printf("%s, ", bool_string(RS->exunit_busy[ex_busy])); */
+                    /* printf("\n"); */
+                }
+            }
         }
     }
 }
 
-#define RS_init(name, max, exunit_name, exunit_max) {name, malloc(sizeof(RS_entry) * max), 0, max, exunit_name, exunit_max}
+#define RS_init(name, max, exunit_name, exunit_max) {name, malloc(sizeof(RS_entry) * max), 0, max, exunit_name, exunit_max, malloc(exunit_max * sizeof(bool))}
 
 int main() {
 
@@ -356,12 +385,14 @@ int main() {
     RS add_sub_rs = RS_init("ADD/SUB RS", ADD_SUB_RS_SIZE, "AS", ADD_SUB_EXUNIT_MAX);
     RS mult_rs = RS_init("MULT RS", MULT_RS_SIZE, "mul", MULT_EXUNIT_MAX);
     RS div_rs = RS_init("DIV RS", DIV_RS_SIZE, "div", DIV_EXUNIT_MAX);
+
     RS* RS[] = {&add_sub_rs, &mult_rs, &div_rs};
 
     Reg Reg = {};
 
     int instruction_size = sizeof(instructions) / sizeof(instruction);
     for (int i = 0; i < instruction_size; i++) {
+        process_issued_instructions(&ROB, RS, &Reg);
         issue_instruction(instructions[i], &ROB, RS, &Reg);
     }
 
