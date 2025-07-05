@@ -5,3 +5,7 @@ tmp/
 
 tomasulo
 *.o
+.ccls-cache
+.cache
+.clang-format
+compile_commands.json
